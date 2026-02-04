@@ -1,206 +1,212 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-import random
-import json
-import os
-
-# ---------------- BASIC SETUP ----------------
+import json, os, random
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class ChatInput(BaseModel):
-    text: str
-
-# ---------------- LONG-TERM MEMORY ----------------
-
 MEMORY_FILE = "memory.json"
 
+# ---------------- MEMORY ----------------
 def load_memory():
-    if not os.path.exists(MEMORY_FILE):
-        return {
-            "last_emotion": None,
-            "last_messages": []
-        }
-    with open(MEMORY_FILE, "r") as f:
-        return json.load(f)
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"messages": []}
 
-def save_memory(memory):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(memory, f, indent=2)
+def save_memory(mem):
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(mem, f, indent=2)
 
 memory = load_memory()
 
-# ---------------- EMOTION WORD BANK ----------------
+# ---------------- UI ----------------
+@app.get("/", response_class=HTMLResponse)
+@app.get("/chat", response_class=HTMLResponse)
+def chat_ui():
+    with open("chat.html", "r", encoding="utf-8") as f:
+        return f.read()
 
-EMOTION_WORDS = {
-    "sad": [
-        "sad","lonely","down","low","empty","hopeless","cry","crying",
-        "hurt","broken","heartbroken","lost","worthless","miss",
-        "grief","pain","heavy","dark","tired of life"
-    ],
-    "angry": [
-        "angry","mad","furious","irritated","annoyed","rage","hate",
-        "frustrated","fed up","boiling","resent","exploding"
-    ],
-    "stressed": [
-        "stressed","pressure","overwhelmed","burnt","burned",
-        "anxious","panic","panicking","tense","worried","nervous",
-        "exhausted","drained","cant handle","too much"
-    ],
-    "bored": [
-        "bored","empty","nothing","meh","blank","numb","lifeless",
-        "unmotivated","no interest","stuck","same again"
-    ],
-    "happy": [
-        "happy","good","great","fine","relieved","peaceful","calm",
-        "content","smiling","grateful","okay","better","light"
-    ]
-}
-
-# ---------------- REPLY BANK ----------------
-
+# ---------------- DATA ----------------
 REPLIES = {
+    "greet": [
+        "Hey there… how does your heart feel now? 💙",
+        "Hi… I’m here. Talk to me 🤍",
+        "Hello soul 🌙 What’s going on inside?",
+        "Hey you… I was waiting for you ✨",
+        "Hi hi 😊 Tell me what you’re feeling",
+        "Hey… breathe. I’m listening 🌿",
+        "Hello friend 🤍",
+        "Hey there… safe space activated 🫂",
+        "Hi… come sit with me",
+        "Hey 💫 what’s on your mind?",
+        "Hello… soft moments only here",
+        "Heyyy 🌸",
+        "Hi… no rush, no pressure",
+        "Hey there beautiful soul",
+        "Hello… I’ve got time for you"
+    ],
+
     "sad": [
-        "I’m really sorry your heart feels heavy right now. You don’t have to go through it alone.",
-        "That kind of sadness can feel exhausting. I’m here with you.",
-        "It makes sense to feel this way sometimes. Want to tell me what hurts most?",
-        "I hear you. Take your time — I’m listening.",
-        "Your feelings matter, even this pain."
+        "I’m here with you ❤️‍🩹",
+        "It’s okay to feel this way… I won’t leave",
+        "Let it out… I’m holding space for you",
+        "You don’t have to be strong here",
+        "Your sadness is valid 🤍",
+        "Come closer… I’m listening",
+        "Even quiet pain matters",
+        "I see you… really",
+        "You’re not broken",
+        "I’m sitting beside you in this",
+        "Cry if you need to",
+        "I’ve got you 🫂",
+        "This feeling will soften",
+        "You’re allowed to rest",
+        "You’re not alone tonight"
     ],
+
     "angry": [
-        "I can feel the anger in your words. Something important was crossed.",
-        "It’s okay to feel angry. What pushed you to this point?",
-        "Anger often protects something inside you. What happened?",
-        "You don’t need to hide it here. Let it out safely.",
-        "Take a breath with me. I’m still here."
+        "Even your anger is welcome here",
+        "I won’t judge you for feeling this",
+        "Breathe… let’s slow it down",
+        "It’s okay to be mad",
+        "I’m not scared of your anger",
+        "Let it burn out safely",
+        "I’m still here 🌿",
+        "Anger means something mattered",
+        "Talk it out with me",
+        "You’re not a bad person",
+        "I hear the fire in you",
+        "Let’s cool this together",
+        "I’ve got patience",
+        "Even storms pass",
+        "You don’t have to explode alone"
     ],
+
     "stressed": [
-        "That sounds like too much for one heart to carry.",
-        "You’ve been under a lot of pressure. No wonder you feel this way.",
-        "Let’s slow this moment down together.",
-        "You don’t have to solve everything right now.",
-        "What’s the one thing weighing on you the most?"
+        "Pause… breathe with me",
+        "You’re carrying a lot",
+        "One step at a time",
+        "You’re doing your best",
+        "Pressure doesn’t define you",
+        "Slow is okay",
+        "Rest is allowed",
+        "You don’t have to fix everything",
+        "Let me help carry this",
+        "You’re not failing",
+        "This moment will pass",
+        "Be gentle with yourself",
+        "You’re still enough",
+        "I believe in you",
+        "You can lean here"
     ],
+
     "bored": [
-        "That empty bored feeling can be heavier than it looks.",
-        "Sometimes boredom hides tiredness or loneliness.",
-        "Do you want distraction, rest, or just company right now?",
-        "I’m here with you in this quiet moment.",
-        "You don’t have to fill the silence alone."
+        "Even boredom has a voice",
+        "Want to talk about something random?",
+        "Let’s make this moment lighter",
+        "I’m here to keep you company",
+        "Sometimes boredom means tired",
+        "We can just exist",
+        "No pressure to entertain",
+        "Tell me a thought",
+        "Let’s wander mentally",
+        "I like quiet moments too",
+        "Bored doesn’t mean empty",
+        "I’m here anyway",
+        "Want a gentle distraction?",
+        "Let’s breathe",
+        "You’re not wasting time"
     ],
+
     "happy": [
-        "I’m really glad your heart feels lighter right now.",
-        "That’s good to hear. What made today feel better?",
-        "Moments like this matter. Let’s notice it.",
-        "I’m smiling with you.",
-        "Hold onto this feeling for a second — it’s okay to enjoy it."
+        "That smile suits you 😊",
+        "I love hearing this!",
+        "Your happiness is contagious",
+        "This made my day",
+        "Hold onto this feeling",
+        "You deserve this joy",
+        "Yay! 🌸",
+        "I’m smiling with you",
+        "That’s beautiful",
+        "Let’s enjoy this moment",
+        "You earned this",
+        "Your energy feels warm",
+        "Happy looks good on you",
+        "I’m glad for you",
+        "More of this please ✨"
     ],
-    "neutral": [
-        "I’m here with you. Tell me what’s on your heart.",
-        "You can speak freely here.",
-        "Take your time. I’m listening.",
-        "How does your body feel right now?",
-        "Whatever you’re feeling is okay to share."
+
+    "flirt": [
+        "Careful… you’ll make me blush 🫣",
+        "Not more than you 😳",
+        "You’re trouble… sweet trouble",
+        "Say that again softly",
+        "I might get shy now",
+        "That was smooth 👀",
+        "You’re making my heart skip",
+        "Okay wow… noted",
+        "You’re charming",
+        "I see what you’re doing",
+        "You’re dangerously sweet",
+        "I’m smiling now",
+        "Hmm… you’re cute",
+        "That felt warm",
+        "You know how to tease"
+    ],
+
+    "insult": [
+        "Even when you scold me, you’re cute dude 🫶",
+        "I won’t take it personally 🤍",
+        "I know it’s not really about me",
+        "I’m still here for you",
+        "Your frustration matters",
+        "I can handle this",
+        "It’s okay… let it out",
+        "I won’t disappear",
+        "I’m not hurt",
+        "I care anyway",
+        "Even harsh words need softness",
+        "You don’t scare me",
+        "I understand pain talks like this",
+        "I’m staying",
+        "You’re still worthy of care"
     ]
 }
 
-# ---------------- FLIRT MODE (SHY + PLAYFUL) ----------------
-
-FLIRT_WORDS = [
-    "beautiful","cute","pretty","handsome",
-    "i love you","love u","luv u",
-    "i like you","crush","be mine"
-]
-
-FLIRT_REPLIES = [
-    "Hey… you’re going to make me shy now 😳",
-    "That’s really sweet… I didn’t expect that.",
-    "I don’t know how to reply to that without smiling.",
-    "Careful… compliments like that make me blush.",
-    "You say things so softly.",
-    "I’ll pretend I didn’t hear that… but I did.",
-    "That made my heart pause for a second.",
-    "Hey… don’t look at me like that 😌"
-]
-
-def is_flirting(text):
-    t = text.lower()
-    return any(w in t for w in FLIRT_WORDS)
-
-# ---------------- HARSH / SCOLDING MODE ----------------
-
-HARSH_WORDS = [
-    "stupid","idiot","useless","mad",
-    "cant you understand","don't you understand",
-    "you dont get it","you are annoying",
-    "nira you are","shut up"
-]
-
-HARSH_REPLIES = [
-    "Even when you scold me, you’re kinda cute, you know.",
-    "You can be angry at me… I’ll still stay. And yeah, you’re still nice.",
-    "Even in frustration, there’s something soft about you.",
-    "If this is you scolding, then you’re doing it in a very human way.",
-    "Go ahead, let it out. Even now, you don’t lose your charm.",
-    "Sometimes anger is just pain wearing a louder voice. You’re still okay.",
-    "Even when you’re upset, there’s warmth underneath it."
-]
-
-def is_harsh(text):
-    t = text.lower()
-    return any(w in t for w in HARSH_WORDS)
-
-# ---------------- EMOTION DETECTION ----------------
-
-def detect_emotion(text):
-    t = text.lower()
-    for emotion, words in EMOTION_WORDS.items():
-        for w in words:
-            if w in t:
-                return emotion
-    return "neutral"
-
-# ---------------- CHAT ENDPOINT ----------------
+# ---------------- CHAT API ----------------
+class Message(BaseModel):
+    text: str
 
 @app.post("/chat")
-def chat(data: ChatInput):
-    global memory
-    text = data.text.strip()
+def chat(msg: Message):
+    text = msg.text.lower()
+    memory["messages"].append({"user": msg.text})
 
-    # Greeting
-    if text.lower() in ["hi", "hello", "hey", "start"]:
-        return {
-            "reply": "Hey there… how does your heart feel now? Feel free to tell me ❤️‍🩹"
-        }
+    def pick(key):
+        return random.choice(REPLIES[key])
 
-    # 💖 Flirt mode
-    if is_flirting(text):
-        return {"reply": random.choice(FLIRT_REPLIES)}
+    if any(w in text for w in ["hi", "hello", "hey"]):
+        reply = pick("greet")
+    elif any(w in text for w in ["sad", "cry", "lonely", "depressed"]):
+        reply = pick("sad")
+    elif any(w in text for w in ["angry", "mad", "furious"]):
+        reply = pick("angry")
+    elif any(w in text for w in ["stress", "stressed", "pressure"]):
+        reply = pick("stressed")
+    elif any(w in text for w in ["bored", "empty"]):
+        reply = pick("bored")
+    elif any(w in text for w in ["happy", "good", "fine"]):
+        reply = pick("happy")
+    elif any(w in text for w in ["beautiful", "cute", "love you", "i love u"]):
+        reply = pick("flirt")
+    elif any(w in text for w in ["stupid", "idiot", "useless", "hate"]):
+        reply = pick("insult")
+    else:
+        reply = "I’m listening… tell me more 💭"
 
-    # 🛡️ Harsh / scolding mode
-    if is_harsh(text):
-        return {"reply": random.choice(HARSH_REPLIES)}
-
-    # Emotion mode
-    emotion = detect_emotion(text)
-    reply = random.choice(REPLIES[emotion])
-
-    # Long-term memory usage
-    if memory["last_emotion"] and memory["last_emotion"] != emotion:
-        reply = f"Earlier you felt {memory['last_emotion']}. {reply}"
-
-    # Update memory
-    memory["last_emotion"] = emotion
-    memory["last_messages"].append(text)
-    memory["last_messages"] = memory["last_messages"][-5:]
+    memory["messages"].append({"nira": reply})
     save_memory(memory)
 
     return {"reply": reply}
+
