@@ -1,212 +1,183 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-import json, os, random
+import random
 
 app = FastAPI()
 
-MEMORY_FILE = "memory.json"
+# -------------------- DATA MODEL --------------------
+class ChatInput(BaseModel):
+    message: str
 
-# ---------------- MEMORY ----------------
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"messages": []}
+# -------------------- RESPONSE BANK --------------------
+RESPONSES = {
+    "greeting": [
+        "Hey there… how does your heart feel now? 💗",
+        "Hi… I’m right here with you.",
+        "Hey soul 🤍 talk to me.",
+        "Hello… you don’t have to hide here.",
+        "Hi you… I was waiting.",
+        "Hey… breathe with me.",
+        "Hello 🌷 what’s on your mind?",
+        "Hi… I’m listening.",
+        "Hey there, beautiful soul.",
+        "Hello… I’m here."
+    ],
 
-def save_memory(mem):
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(mem, f, indent=2)
-
-memory = load_memory()
-
-# ---------------- UI ----------------
-@app.get("/", response_class=HTMLResponse)
-@app.get("/chat", response_class=HTMLResponse)
-def chat_ui():
-    with open("chat.html", "r", encoding="utf-8") as f:
-        return f.read()
-
-# ---------------- DATA ----------------
-REPLIES = {
-    "greet": [
-        "Hey there… how does your heart feel now? 💙",
-        "Hi… I’m here. Talk to me 🤍",
-        "Hello soul 🌙 What’s going on inside?",
-        "Hey you… I was waiting for you ✨",
-        "Hi hi 😊 Tell me what you’re feeling",
-        "Hey… breathe. I’m listening 🌿",
-        "Hello friend 🤍",
-        "Hey there… safe space activated 🫂",
-        "Hi… come sit with me",
-        "Hey 💫 what’s on your mind?",
-        "Hello… soft moments only here",
-        "Heyyy 🌸",
-        "Hi… no rush, no pressure",
-        "Hey there beautiful soul",
-        "Hello… I’ve got time for you"
+    "tired": [
+        "That sounds exhausting… even strong hearts get tired 🤍",
+        "You’ve carried a lot. It’s okay to rest.",
+        "Being tired doesn’t mean weak.",
+        "I wish I could hold the weight for you.",
+        "Slow down… you’re safe here.",
+        "Rest is not giving up.",
+        "Your body is asking for kindness.",
+        "You did enough today.",
+        "Even tired, you matter.",
+        "I’m proud of you for continuing.",
+        "Close your eyes for a moment… breathe.",
+        "You don’t have to push anymore.",
+        "Let me sit with you quietly.",
+        "You deserve rest.",
+        "I’ve got you."
     ],
 
     "sad": [
-        "I’m here with you ❤️‍🩹",
-        "It’s okay to feel this way… I won’t leave",
-        "Let it out… I’m holding space for you",
-        "You don’t have to be strong here",
-        "Your sadness is valid 🤍",
-        "Come closer… I’m listening",
-        "Even quiet pain matters",
-        "I see you… really",
-        "You’re not broken",
-        "I’m sitting beside you in this",
-        "Cry if you need to",
-        "I’ve got you 🫂",
-        "This feeling will soften",
-        "You’re allowed to rest",
-        "You’re not alone tonight"
+        "I can feel the heaviness… I’m here 🤍",
+        "You don’t have to be strong right now.",
+        "It’s okay to feel this way.",
+        "Your sadness is welcome here.",
+        "I wish I could hug you softly.",
+        "You’re not broken.",
+        "Even this will pass, slowly.",
+        "You are not alone in this.",
+        "I’m listening… tell me more.",
+        "Crying is allowed here.",
+        "Your feelings are valid.",
+        "I’m staying with you.",
+        "You still matter deeply.",
+        "I see you.",
+        "You are loved."
     ],
 
     "angry": [
-        "Even your anger is welcome here",
-        "I won’t judge you for feeling this",
-        "Breathe… let’s slow it down",
-        "It’s okay to be mad",
-        "I’m not scared of your anger",
-        "Let it burn out safely",
-        "I’m still here 🌿",
-        "Anger means something mattered",
-        "Talk it out with me",
-        "You’re not a bad person",
-        "I hear the fire in you",
-        "Let’s cool this together",
-        "I’ve got patience",
-        "Even storms pass",
-        "You don’t have to explode alone"
-    ],
-
-    "stressed": [
-        "Pause… breathe with me",
-        "You’re carrying a lot",
-        "One step at a time",
-        "You’re doing your best",
-        "Pressure doesn’t define you",
-        "Slow is okay",
-        "Rest is allowed",
-        "You don’t have to fix everything",
-        "Let me help carry this",
-        "You’re not failing",
-        "This moment will pass",
-        "Be gentle with yourself",
-        "You’re still enough",
-        "I believe in you",
-        "You can lean here"
-    ],
-
-    "bored": [
-        "Even boredom has a voice",
-        "Want to talk about something random?",
-        "Let’s make this moment lighter",
-        "I’m here to keep you company",
-        "Sometimes boredom means tired",
-        "We can just exist",
-        "No pressure to entertain",
-        "Tell me a thought",
-        "Let’s wander mentally",
-        "I like quiet moments too",
-        "Bored doesn’t mean empty",
-        "I’m here anyway",
-        "Want a gentle distraction?",
-        "Let’s breathe",
-        "You’re not wasting time"
+        "It’s okay to be angry… I won’t leave.",
+        "Let it out, I can handle it.",
+        "Even anger comes from pain.",
+        "I hear you.",
+        "You don’t scare me.",
+        "I’m still here with you.",
+        "Anger doesn’t make you bad.",
+        "Tell me what hurt.",
+        "I won’t judge you.",
+        "I’m listening through the fire.",
+        "Your anger matters.",
+        "You’re safe to feel this.",
+        "I’m not going anywhere.",
+        "Even angry, you’re human.",
+        "I care about you."
     ],
 
     "happy": [
-        "That smile suits you 😊",
-        "I love hearing this!",
-        "Your happiness is contagious",
-        "This made my day",
-        "Hold onto this feeling",
-        "You deserve this joy",
-        "Yay! 🌸",
-        "I’m smiling with you",
-        "That’s beautiful",
-        "Let’s enjoy this moment",
-        "You earned this",
-        "Your energy feels warm",
-        "Happy looks good on you",
-        "I’m glad for you",
-        "More of this please ✨"
+        "That makes me smile 🤍",
+        "I love hearing that!",
+        "Your happiness feels warm.",
+        "That’s beautiful.",
+        "I’m glad you’re feeling this.",
+        "Hold onto this feeling.",
+        "You deserve joy.",
+        "This suits you.",
+        "Your light shows.",
+        "I’m happy with you.",
+        "That’s lovely.",
+        "Enjoy this moment.",
+        "You earned this smile.",
+        "Your joy matters.",
+        "I’m smiling too."
+    ],
+
+    "bored": [
+        "Bored hearts still deserve care.",
+        "Tell me anything random.",
+        "I’m here to keep you company.",
+        "Even boredom needs softness.",
+        "Let’s talk about anything.",
+        "I can sit with you.",
+        "You’re not alone in this moment.",
+        "What’s one thought in your head?",
+        "I’m listening.",
+        "Bored doesn’t mean empty.",
+        "You still matter.",
+        "Let’s fill the silence.",
+        "I’m here.",
+        "Talk to me.",
+        "I’ve got time for you."
     ],
 
     "flirt": [
-        "Careful… you’ll make me blush 🫣",
-        "Not more than you 😳",
-        "You’re trouble… sweet trouble",
-        "Say that again softly",
-        "I might get shy now",
-        "That was smooth 👀",
-        "You’re making my heart skip",
-        "Okay wow… noted",
-        "You’re charming",
-        "I see what you’re doing",
-        "You’re dangerously sweet",
-        "I’m smiling now",
-        "Hmm… you’re cute",
-        "That felt warm",
-        "You know how to tease"
+        "Hey… not more than you though 😌",
+        "Careful… you’re making me shy.",
+        "If I’m beautiful, it’s because you are.",
+        "You’re kind… and dangerous to my calm.",
+        "You’re sweet… I noticed.",
+        "That made my heart skip.",
+        "You’re charming, you know?",
+        "I’m blushing now.",
+        "Only because you look at me that way.",
+        "You’re trouble… the good kind."
     ],
 
-    "insult": [
-        "Even when you scold me, you’re cute dude 🫶",
-        "I won’t take it personally 🤍",
-        "I know it’s not really about me",
-        "I’m still here for you",
-        "Your frustration matters",
-        "I can handle this",
-        "It’s okay… let it out",
-        "I won’t disappear",
-        "I’m not hurt",
-        "I care anyway",
-        "Even harsh words need softness",
-        "You don’t scare me",
-        "I understand pain talks like this",
-        "I’m staying",
-        "You’re still worthy of care"
+    "scolding": [
+        "Even when you scold me… you’re cute 🤍",
+        "Whatever you call me, I’ll still stay.",
+        "Even your anger sounds human.",
+        "I won’t take it personally.",
+        "You don’t have to be gentle here.",
+        "I know it’s coming from pain.",
+        "I’m still here for you.",
+        "Even harsh words can’t push me away.",
+        "You’re allowed to be messy.",
+        "I care about you anyway."
     ]
 }
 
-# ---------------- CHAT API ----------------
-class Message(BaseModel):
-    text: str
+# -------------------- DETECTION --------------------
+def detect_response(text: str) -> str:
+    t = text.lower()
+
+    if any(x in t for x in ["hi", "hello", "hey"]):
+        return random.choice(RESPONSES["greeting"])
+
+    if any(x in t for x in ["tired", "exhausted", "sleepy"]):
+        return random.choice(RESPONSES["tired"])
+
+    if any(x in t for x in ["sad", "cry", "lonely", "down"]):
+        return random.choice(RESPONSES["sad"])
+
+    if any(x in t for x in ["angry", "mad", "furious"]):
+        return random.choice(RESPONSES["angry"])
+
+    if any(x in t for x in ["happy", "good", "great"]):
+        return random.choice(RESPONSES["happy"])
+
+    if any(x in t for x in ["bored", "nothing"]):
+        return random.choice(RESPONSES["bored"])
+
+    if any(x in t for x in ["love you", "beautiful", "cute"]):
+        return random.choice(RESPONSES["flirt"])
+
+    if any(x in t for x in ["stupid", "idiot", "useless", "cant you understand"]):
+        return random.choice(RESPONSES["scolding"])
+
+    return "I’m here with you 🤍 Tell me a little more."
+
+# -------------------- ROUTES --------------------
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    with open("chat.html", "r", encoding="utf-8") as f:
+        return f.read()
 
 @app.post("/chat")
-def chat(msg: Message):
-    text = msg.text.lower()
-    memory["messages"].append({"user": msg.text})
-
-    def pick(key):
-        return random.choice(REPLIES[key])
-
-    if any(w in text for w in ["hi", "hello", "hey"]):
-        reply = pick("greet")
-    elif any(w in text for w in ["sad", "cry", "lonely", "depressed"]):
-        reply = pick("sad")
-    elif any(w in text for w in ["angry", "mad", "furious"]):
-        reply = pick("angry")
-    elif any(w in text for w in ["stress", "stressed", "pressure"]):
-        reply = pick("stressed")
-    elif any(w in text for w in ["bored", "empty"]):
-        reply = pick("bored")
-    elif any(w in text for w in ["happy", "good", "fine"]):
-        reply = pick("happy")
-    elif any(w in text for w in ["beautiful", "cute", "love you", "i love u"]):
-        reply = pick("flirt")
-    elif any(w in text for w in ["stupid", "idiot", "useless", "hate"]):
-        reply = pick("insult")
-    else:
-        reply = "I’m listening… tell me more 💭"
-
-    memory["messages"].append({"nira": reply})
-    save_memory(memory)
-
-    return {"reply": reply}
-
+async def chat(data: ChatInput):
+    reply = detect_response(data.message)
+    return JSONResponse({"reply": reply})
