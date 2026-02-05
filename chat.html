@@ -1,145 +1,118 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>NIRA ❤️‍🩹</title>
+<meta charset="UTF-8">
+<title>NIRA ❤️‍🩹</title>
 
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: #f6e7e7;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: Arial, sans-serif;
-    }
-
-    .chat-box {
-      width: 360px;
-      height: 520px;
-      background: #fff;
-      border-radius: 18px;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      overflow: hidden;
-    }
-
-    .header {
-      background: #e9b7b7;
-      padding: 14px;
-      text-align: center;
-      font-weight: bold;
-      color: #fff;
-      font-size: 18px;
-    }
-
-    .messages {
-      flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-    }
-
-    .msg {
-      margin-bottom: 10px;
-      max-width: 75%;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
-    .nira {
-      background: #f3dcdc;
-      align-self: flex-start;
-    }
-
-    .user {
-      background: #cfe3ff;
-      align-self: flex-end;
-    }
-
-    .input-area {
-      display: flex;
-      padding: 10px;
-      border-top: 1px solid #ddd;
-    }
-
-    input {
-      flex: 1;
-      border: none;
-      padding: 10px;
-      border-radius: 12px;
-      outline: none;
-      background: #f2f2f2;
-    }
-
-    button {
-      margin-left: 8px;
-      border: none;
-      background: #e9b7b7;
-      color: white;
-      border-radius: 50%;
-      width: 42px;
-      height: 42px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  height:100vh;
+  background:#f6eaea;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Arial;
+}
+#box{
+  width:360px;
+  height:520px;
+  background:white;
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 10px 25px rgba(0,0,0,0.2);
+}
+#head{
+  padding:14px;
+  background:#e9a6a6;
+  color:white;
+  text-align:center;
+  font-weight:bold;
+}
+#msgs{
+  flex:1;
+  padding:12px;
+  overflow-y:auto;
+}
+.msg{
+  margin-bottom:8px;
+  padding:10px 14px;
+  border-radius:14px;
+  max-width:75%;
+}
+.user{
+  background:#cfe3ff;
+  margin-left:auto;
+}
+.bot{
+  background:#f2dede;
+}
+#input{
+  display:flex;
+  padding:10px;
+  border-top:1px solid #ddd;
+}
+input{
+  flex:1;
+  border:none;
+  padding:10px;
+  border-radius:12px;
+  background:#f2f2f2;
+}
+button{
+  margin-left:8px;
+  border:none;
+  background:#e9a6a6;
+  color:white;
+  border-radius:50%;
+  width:42px;
+  cursor:pointer;
+}
+</style>
 </head>
 
 <body>
-  <div class="chat-box">
-    <div class="header">NIRA ❤️‍🩹</div>
-
-    <div id="messages" class="messages"></div>
-
-    <div class="input-area">
-      <input id="msg" placeholder="Type how you feel..." />
-      <button onclick="sendMessage()">➤</button>
-    </div>
+<div id="box">
+  <div id="head">NIRA ❤️‍🩹</div>
+  <div id="msgs">
+    <div class="msg bot">Hey there… how does your heart feel now? 💗</div>
   </div>
+  <div id="input">
+    <input id="text" placeholder="Type how you feel…" />
+    <button onclick="send()">➤</button>
+  </div>
+</div>
 
-  <script>
-    const messages = document.getElementById("messages");
+<script>
+async function send(){
+  const input=document.getElementById("text");
+  const msg=input.value.trim();
+  if(!msg) return;
 
-    function addMessage(sender, text) {
-      const div = document.createElement("div");
-      div.classList.add("msg");
-      div.classList.add(sender === "NIRA" ? "nira" : "user");
-      div.textContent = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    }
+  add(msg,"user");
+  input.value="";
 
-    addMessage(
-      "NIRA",
-      "Hey there… how does your heart feel now? Feel free to tell me 💗"
-    );
+  try{
+    const res=await fetch("/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message:msg})
+    });
+    const data=await res.json();
+    add(data.reply,"bot");
+  }catch(e){
+    add("I’m here… something glitched 🤍","bot");
+  }
+}
 
-    async function sendMessage() {
-      const input = document.getElementById("msg");
-      const text = input.value.trim();
-      if (!text) return;
-
-      addMessage("You", text);
-      input.value = "";
-
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
-        });
-
-        const data = await res.json();
-        addMessage("NIRA", data.reply);
-
-      } catch (err) {
-        addMessage("NIRA", "I'm here… something went wrong, but I didn't leave 🤍");
-      }
-    }
-  </script>
+function add(text,cls){
+  const d=document.createElement("div");
+  d.className="msg "+cls;
+  d.textContent=text;
+  document.getElementById("msgs").appendChild(d);
+  document.getElementById("msgs").scrollTop=9999;
+}
+</script>
 </body>
 </html>
