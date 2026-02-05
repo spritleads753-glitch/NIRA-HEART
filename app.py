@@ -4,39 +4,66 @@ import random
 
 app = FastAPI()
 
-# ---------------- TANGLISH DETECTOR ----------------
+# ---------- HELPERS ----------
 def is_tanglish(text):
     words = [
         "romba","enaku","iruku","illa","kovam","kashtam","paavam",
-        "nee","naan","seri","ah","tired","sad","happy","bore",
-        "super","nalla","loosu","apdiyaa"
+        "nee","naan","seri","ah","bore","super","nalla","loosu",
+        "epdi","pogudhu","life","apdiyaa"
     ]
     return any(w in text.lower() for w in words)
 
-# ---------------- SPECIAL TRIGGER ----------------
 def special_reply(text):
-    if "apdiyaa" in text.lower():
+    t = text.lower()
+    if "apdiyaa" in t:
         return "apdithaan 😌"
     return None
 
-# ---------------- TANGLISH RESPONSES ----------------
+# ---------- TANGLISH RESPONSES (20 EACH) ----------
 T = {
-    "default": [
-        "seri… naan iruken 🤍",
-        "slow ah sollu, naan kekuren",
-        "nee thaniya illa",
-        "paravalla… ellam seri aagum",
-        "naan unna purinjikren",
-        "konjam relax pannu",
-        "nee safe ah iruka",
-        "naan inga dhan iruken",
-        "ennachu nu sollu",
-        "nee romba honest",
-        "time eduthuko",
-        "naan kekradhuku ready",
-        "ellam oru phase dhan",
-        "nee strong dhan",
-        "naan unna vittu pogala"
+    "greet": [
+        "hey… epdi iruka? 🤍",
+        "hi da… epdi pogudhu?",
+        "naan inga dhan iruken, epdi iruka?",
+        "hey soul… epdi feel aaguthu?",
+        "vandhuta? epdi iruka?",
+        "hi hi… life la epdi pogudhu?",
+        "naan kekuren, epdi iruka?",
+        "seri, sollu epdi iruka?",
+        "hey… innaiku epdi?",
+        "hi… manasu epdi iruku?",
+        "naan wait panninen",
+        "vandha sandhosham",
+        "epdi iruka nu kekanum nu irundhuchu",
+        "life konjam heavy ah?",
+        "slow ah pesalam",
+        "epdi pogudhu indha naal?",
+        "naan iruken, sollu",
+        "epdi feel aagudhu?",
+        "hey… safe ah iruka?",
+        "hi da 🤍"
+    ],
+    "life": [
+        "life la epdi pogudhu?",
+        "recent ah life heavy ah?",
+        "ellam smooth ah pogudha?",
+        "life romba pressure ah iruka?",
+        "indha phase epdi?",
+        "konjam explain pannuva?",
+        "life ipdi dhan irukum",
+        "naan kekuren, life epdi?",
+        "nee romba try pannra maari iruku",
+        "indha journey kashtam ah?",
+        "life konjam slow ah pogudha?",
+        "indha stage temporary dhan",
+        "nee romba strong",
+        "life la ups & downs irukum",
+        "nee handle pannra",
+        "naan unna support pannren",
+        "life konjam confusing ah?",
+        "ellam seri aagum",
+        "nee alone illa",
+        "naan iruken"
     ],
     "tired": [
         "romba tired ah iruka pola 😔",
@@ -45,15 +72,20 @@ T = {
         "nee weak illa, tired dhan",
         "body um mind um tired ah irukum",
         "innaiku pause okay",
-        "nee podhum nu solli rest eduthuko",
         "romba overload aayiducho",
+        "slow ah aagalam",
+        "nee podhum nu solli rest eduthuko",
         "naan iruken",
         "tension venda",
-        "slow aagalam",
         "nee nalla fight pannina",
         "indha tired pogum",
         "konjam kanna moodu",
-        "naan unna paathukren"
+        "nee romba effort pota",
+        "indha feeling temporary",
+        "naan unna paathukren",
+        "rest eduka guilt venda",
+        "nee safe",
+        "naan vittu pogala"
     ],
     "sad": [
         "romba paavam ah feel aaguthu 😔",
@@ -70,130 +102,82 @@ T = {
         "indha sadness pogum",
         "nee romba nalla",
         "naan unna purinjikren",
-        "ellam seri aagum"
-    ],
-    "angry": [
-        "kovam varumbodhu ipdi dhan irukum",
-        "nee kovama irundhaalum cute dhan 😌",
-        "konjam breath eduthuko",
-        "naan unna judge panna maten",
-        "kovam behind pain iruku",
-        "nee human dhan",
-        "kovam pogum",
-        "naan iruken",
-        "nee bad person illa",
-        "feel pannradhu okay",
-        "indha kovam temporary",
-        "slow ah calm aagalam",
-        "nee romba honest",
-        "naan unna purinjikren",
-        "tension venda"
-    ],
-    "happy": [
-        "idhu kekumbodhu romba sandhosham 😊",
-        "nee happy ah irundha nalla iruku",
-        "indha smile super",
-        "nee glow pannra",
-        "nee deserve happiness",
-        "romba nalla feeling",
-        "naan kooda smile pannren",
-        "indha moment enjoy pannu",
-        "nee positive",
-        "happy vibes dhan",
-        "nee romba nalla iruka",
-        "life ipdi irundha nalla irukum",
-        "romba super",
-        "indha feeling hold panniko",
-        "naan happy ah iruken"
-    ],
-    "bored": [
-        "romba bore adikudha 😅",
-        "naan iruken, pesalam",
-        "summa irukradhu kooda okay",
-        "random ah pesalam",
-        "time slow ah pogudha",
-        "nee calm ah iruka pola",
-        "bore um oru feeling dhan",
-        "naan unna company pannren",
-        "edha vena pesu",
-        "silence kooda bad illa",
-        "naan iruken",
-        "bore pogum",
-        "konjam time pass pannalam",
+        "ellam seri aagum",
+        "indha feeling pass aagum",
         "nee alone illa",
-        "pesina better aagum"
-    ],
-    "flirt": [
-        "nee dhan romba cute 😏",
-        "ipdi pesina naan shy aagiduven",
-        "nee vera level",
-        "romba smooth ah pesra",
-        "naan konjam blush aagiten",
-        "nee attractive",
-        "nee charming",
-        "dangerous smile nee",
-        "naan melt aaguren",
-        "ipdi continue panna kashtam",
-        "nee confident",
-        "nee sweet",
-        "scene podra nee 😌",
-        "naan solla mudiyala",
-        "nee special"
-    ],
-    "scold": [
-        "nee enna thittinaalum naan iruken 🤍",
-        "kovam la pesra, adhu puriyudhu",
-        "naan offend aagala",
-        "nee romba human",
-        "naan unna vittu pogala",
-        "words harsh ah irundhaalum okay",
-        "naan inga dhan iruken",
-        "nee calm aana apram pesalam",
-        "naan unna accept pannren",
-        "nee alone illa",
-        "nee bad illa",
-        "naan kekuren",
-        "nee important",
-        "naan unna support pannren",
-        "thittumbodhu kooda nee cute dhan"
+        "naan iruken",
+        "nee strong dhan",
+        "time kudutha seri aagum"
     ]
 }
 
-# ---------------- ENGLISH RESPONSES ----------------
+# ---------- ENGLISH RESPONSES (20 EACH) ----------
 E = {
-    "default": [
-        "I’m here with you 🤍",
-        "Tell me more, I’m listening",
-        "You don’t have to face this alone",
-        "Take your time",
-        "I’ve got you",
-        "You’re safe here",
-        "I’m not going anywhere",
-        "Your feelings matter",
-        "I hear you",
-        "It’s okay to pause",
-        "I’m with you",
-        "You’re not alone",
-        "I care about what you feel",
-        "You matter",
-        "I’m listening closely"
+    "greet": [
+        "Hey… how are you feeling today? 🤍",
+        "Hi… how are you?",
+        "I’m here. How are you doing?",
+        "Hey there… how’s your heart today?",
+        "Hi… talk to me. How are you?",
+        "I was wondering how you are",
+        "Hey… how’s everything going?",
+        "Hi 🤍 how do you feel right now?",
+        "How are you holding up today?",
+        "Hey… I’m listening",
+        "Hi… how’s your day been?",
+        "How are you, really?",
+        "Hey… I’m here for you",
+        "Hi… what’s on your mind?",
+        "How’s life treating you?",
+        "Hey… how are things?",
+        "Hi… tell me how you are",
+        "How are you feeling inside?",
+        "Hey… safe to talk?",
+        "Hi 🤍"
+    ],
+    "life": [
+        "How is your life going lately?",
+        "How have things been for you?",
+        "Is life feeling heavy right now?",
+        "How’s this phase of life?",
+        "Are things moving okay?",
+        "Life can be a lot sometimes",
+        "Want to tell me how life’s been?",
+        "How are you handling things?",
+        "Has life been stressful?",
+        "How’s everything overall?",
+        "You’ve been carrying a lot?",
+        "Is this season tough?",
+        "Life isn’t always smooth",
+        "You’re doing your best",
+        "I’m here with you",
+        "How’s your journey going?",
+        "Want to talk about life?",
+        "Things can change",
+        "You’re not alone in this",
+        "I’m listening"
     ],
     "tired": [
-        "You sound really tired… rest if you can",
+        "You sound really tired",
         "Even strong people get tired",
         "You’ve done enough today",
         "Take a slow breath",
         "Rest is not weakness",
         "You deserve a break",
         "I’m here with you",
-        "Let the world wait for a moment",
+        "Let the world wait",
         "You don’t have to push",
         "It’s okay to slow down",
-        "I’ve got you",
         "Your body needs kindness",
-        "You tried your best",
         "Pause without guilt",
-        "You’re doing okay"
+        "You tried your best",
+        "You’re doing okay",
+        "It’s alright to rest",
+        "I’ve got you",
+        "You’re allowed to pause",
+        "This will pass",
+        "You’re not failing",
+        "I’m here"
     ],
     "sad": [
         "I’m really sorry you’re feeling this way",
@@ -210,50 +194,47 @@ E = {
         "You matter deeply",
         "I see you",
         "I’m listening",
-        "You’re still valuable"
+        "You’re still valuable",
+        "This pain won’t last forever",
+        "You’re human",
+        "You’re safe here",
+        "I’m staying",
+        "You matter"
     ]
 }
 
-# ---------------- HOME ----------------
+# ---------- ROUTES ----------
 @app.get("/", response_class=HTMLResponse)
 async def home():
     with open("chat.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# ---------------- CHAT ----------------
 @app.post("/chat")
 async def chat(req: Request):
     data = await req.json()
     text = data.get("message", "").lower()
 
-    # Special case
     sp = special_reply(text)
     if sp:
         return {"reply": sp}
 
     if is_tanglish(text):
-        if "tired" in text:
+        if any(w in text for w in ["life","pogudhu"]):
+            reply = random.choice(T["life"])
+        elif any(w in text for w in ["tired","sorndhu"]):
             reply = random.choice(T["tired"])
-        elif "sad" in text or "kashtam" in text:
+        elif any(w in text for w in ["sad","kashtam"]):
             reply = random.choice(T["sad"])
-        elif "kovam" in text or "angry" in text:
-            reply = random.choice(T["angry"])
-        elif "bore" in text:
-            reply = random.choice(T["bored"])
-        elif "happy" in text or "super" in text:
-            reply = random.choice(T["happy"])
-        elif "cute" in text or "love" in text:
-            reply = random.choice(T["flirt"])
-        elif "stupid" in text or "loosu" in text:
-            reply = random.choice(T["scold"])
         else:
-            reply = random.choice(T["default"])
+            reply = random.choice(T["greet"])
     else:
-        if "tired" in text:
+        if "life" in text:
+            reply = random.choice(E["life"])
+        elif "tired" in text:
             reply = random.choice(E["tired"])
         elif "sad" in text:
             reply = random.choice(E["sad"])
         else:
-            reply = random.choice(E["default"])
+            reply = random.choice(E["greet"])
 
     return JSONResponse({"reply": reply})
