@@ -48,6 +48,10 @@ body{
 .bot{
   background:#f2dede;
 }
+.typing{
+  font-style:italic;
+  opacity:0.7;
+}
 #input{
   display:flex;
   padding:10px;
@@ -76,7 +80,7 @@ button{
 <div id="box">
   <div id="head">NIRA ❤️‍🩹</div>
   <div id="msgs">
-    <div class="msg bot">Hey there… how does your heart feel now? 💗</div>
+    <div class="msg bot">Hey… how are you? 🤍</div>
   </div>
   <div id="input">
     <input id="text" placeholder="Type how you feel…" />
@@ -85,6 +89,15 @@ button{
 </div>
 
 <script>
+function add(text,cls){
+  const d=document.createElement("div");
+  d.className="msg "+cls;
+  d.textContent=text;
+  document.getElementById("msgs").appendChild(d);
+  document.getElementById("msgs").scrollTop=9999;
+  return d;
+}
+
 async function send(){
   const input=document.getElementById("text");
   const msg=input.value.trim();
@@ -93,6 +106,8 @@ async function send(){
   add(msg,"user");
   input.value="";
 
+  const typing = add("NIRA is typing…","bot typing");
+
   try{
     const res=await fetch("/chat",{
       method:"POST",
@@ -100,18 +115,12 @@ async function send(){
       body:JSON.stringify({message:msg})
     });
     const data=await res.json();
+    typing.remove();
     add(data.reply,"bot");
   }catch(e){
+    typing.remove();
     add("I’m here… something glitched 🤍","bot");
   }
-}
-
-function add(text,cls){
-  const d=document.createElement("div");
-  d.className="msg "+cls;
-  d.textContent=text;
-  document.getElementById("msgs").appendChild(d);
-  document.getElementById("msgs").scrollTop=9999;
 }
 </script>
 </body>
