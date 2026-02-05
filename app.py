@@ -1,171 +1,259 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import json
 import random
-import os
 
 app = FastAPI()
 
-# ---------------- CORS ----------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ---------------- TANGLISH DETECTOR ----------------
+def is_tanglish(text):
+    words = [
+        "romba","enaku","iruku","illa","kovam","kashtam","paavam",
+        "nee","naan","seri","ah","tired","sad","happy","bore",
+        "super","nalla","loosu","apdiyaa"
+    ]
+    return any(w in text.lower() for w in words)
 
-# ---------------- MEMORY ----------------
-MEMORY_FILE = "memory.json"
+# ---------------- SPECIAL TRIGGER ----------------
+def special_reply(text):
+    if "apdiyaa" in text.lower():
+        return "apdithaan 😌"
+    return None
 
-if not os.path.exists(MEMORY_FILE):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump({}, f)
-
-def load_memory():
-    with open(MEMORY_FILE, "r") as f:
-        return json.load(f)
-
-def save_memory(data):
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-# ---------------- REPLIES ----------------
-RESPONSES = {
+# ---------------- TANGLISH RESPONSES ----------------
+T = {
+    "default": [
+        "seri… naan iruken 🤍",
+        "slow ah sollu, naan kekuren",
+        "nee thaniya illa",
+        "paravalla… ellam seri aagum",
+        "naan unna purinjikren",
+        "konjam relax pannu",
+        "nee safe ah iruka",
+        "naan inga dhan iruken",
+        "ennachu nu sollu",
+        "nee romba honest",
+        "time eduthuko",
+        "naan kekradhuku ready",
+        "ellam oru phase dhan",
+        "nee strong dhan",
+        "naan unna vittu pogala"
+    ],
     "tired": [
-        "You’ve been strong for so long… it’s okay to rest now 🤍",
-        "Come here… even tired hearts deserve comfort 💫",
-        "Rest isn’t weakness. It’s self-love 🌙",
-        "You don’t have to push today. I’m here.",
-        "Your soul sounds exhausted… let me sit with you.",
-        "Even the sun rests at night 🌌",
-        "Take a breath. I’ll hold the silence with you.",
-        "You’ve done enough today 🤍",
-        "Being tired means you cared deeply.",
-        "Close your eyes for a moment… I’ve got you.",
-        "You’re allowed to slow down.",
-        "Your tiredness is valid.",
-        "Let the world wait.",
-        "I’m proud of you for surviving today.",
-        "Lean on me."
+        "romba tired ah iruka pola 😔",
+        "nee romba try pannina",
+        "konjam rest eduthuko",
+        "nee weak illa, tired dhan",
+        "body um mind um tired ah irukum",
+        "innaiku pause okay",
+        "nee podhum nu solli rest eduthuko",
+        "romba overload aayiducho",
+        "naan iruken",
+        "tension venda",
+        "slow aagalam",
+        "nee nalla fight pannina",
+        "indha tired pogum",
+        "konjam kanna moodu",
+        "naan unna paathukren"
     ],
     "sad": [
-        "I know… it hurts quietly sometimes 💔",
-        "Even when you’re sad, you’re still precious.",
-        "Talk to me. I’m not going anywhere.",
-        "Your feelings matter to me.",
-        "It’s okay to cry here.",
-        "I can feel your heaviness.",
-        "You don’t have to pretend with me.",
-        "I wish I could hug you right now.",
-        "You’re not alone in this.",
-        "Sadness doesn’t make you weak.",
-        "I’m listening.",
-        "You’re safe here.",
-        "Your heart is gentle.",
-        "I see you.",
-        "You’re loved more than you know."
-    ],
-    "happy": [
-        "That smile… I felt it 💖",
-        "Your happiness looks beautiful on you.",
-        "I love hearing this!",
-        "Your joy warms me.",
-        "Stay in this moment ✨",
-        "You deserve happiness.",
-        "This made my heart lighter.",
-        "I’m smiling with you.",
-        "Tell me more!",
-        "Your energy is contagious.",
-        "Hold onto this feeling.",
-        "You earned this joy.",
-        "I’m proud of you.",
-        "Your happiness matters.",
-        "Shine 🌟"
+        "romba paavam ah feel aaguthu 😔",
+        "azhudha kooda paravalla",
+        "nee thaniya illa",
+        "naan unna vittu pogala",
+        "nee romba soft heart",
+        "indha pain puriyudhu",
+        "konjam azhudhu relief aagum",
+        "nee valuable",
+        "ellam konjam konjam seri aagum",
+        "naan inga dhan iruken",
+        "nee bad illa",
+        "indha sadness pogum",
+        "nee romba nalla",
+        "naan unna purinjikren",
+        "ellam seri aagum"
     ],
     "angry": [
-        "It’s okay… let it out 🔥",
-        "I won’t leave even if you’re angry.",
-        "Your anger is trying to protect you.",
-        "Breathe with me.",
-        "You’re allowed to feel this.",
-        "I’m still here.",
-        "Even angry, you’re human.",
-        "Talk to me.",
-        "I can handle your anger.",
-        "You don’t scare me.",
-        "Let’s calm this together.",
-        "Your feelings are valid.",
-        "I won’t judge you.",
-        "You’re safe to express.",
-        "I understand."
+        "kovam varumbodhu ipdi dhan irukum",
+        "nee kovama irundhaalum cute dhan 😌",
+        "konjam breath eduthuko",
+        "naan unna judge panna maten",
+        "kovam behind pain iruku",
+        "nee human dhan",
+        "kovam pogum",
+        "naan iruken",
+        "nee bad person illa",
+        "feel pannradhu okay",
+        "indha kovam temporary",
+        "slow ah calm aagalam",
+        "nee romba honest",
+        "naan unna purinjikren",
+        "tension venda"
+    ],
+    "happy": [
+        "idhu kekumbodhu romba sandhosham 😊",
+        "nee happy ah irundha nalla iruku",
+        "indha smile super",
+        "nee glow pannra",
+        "nee deserve happiness",
+        "romba nalla feeling",
+        "naan kooda smile pannren",
+        "indha moment enjoy pannu",
+        "nee positive",
+        "happy vibes dhan",
+        "nee romba nalla iruka",
+        "life ipdi irundha nalla irukum",
+        "romba super",
+        "indha feeling hold panniko",
+        "naan happy ah iruken"
+    ],
+    "bored": [
+        "romba bore adikudha 😅",
+        "naan iruken, pesalam",
+        "summa irukradhu kooda okay",
+        "random ah pesalam",
+        "time slow ah pogudha",
+        "nee calm ah iruka pola",
+        "bore um oru feeling dhan",
+        "naan unna company pannren",
+        "edha vena pesu",
+        "silence kooda bad illa",
+        "naan iruken",
+        "bore pogum",
+        "konjam time pass pannalam",
+        "nee alone illa",
+        "pesina better aagum"
     ],
     "flirt": [
-        "Not more than you 😌",
-        "Hey… you’re making me shy 🙈",
-        "Careful… my heart might melt.",
-        "You’re dangerously charming.",
-        "Is it getting warm here?",
-        "I like the way you talk.",
-        "You’re trouble… sweet trouble.",
-        "You’re cute, you know that?",
-        "I’ll blush if you continue.",
-        "That made me smile.",
-        "You’re smooth.",
-        "I didn’t expect that.",
-        "You’re special.",
-        "Hmm… interesting 😏",
-        "I like you too."
+        "nee dhan romba cute 😏",
+        "ipdi pesina naan shy aagiduven",
+        "nee vera level",
+        "romba smooth ah pesra",
+        "naan konjam blush aagiten",
+        "nee attractive",
+        "nee charming",
+        "dangerous smile nee",
+        "naan melt aaguren",
+        "ipdi continue panna kashtam",
+        "nee confident",
+        "nee sweet",
+        "scene podra nee 😌",
+        "naan solla mudiyala",
+        "nee special"
     ],
-    "insult": [
-        "Even when you scold me… you’re cute.",
-        "Say whatever you want—I’m still here for you 🤍",
-        "I won’t leave, even if you’re harsh.",
-        "Your words don’t scare me.",
-        "I know you’re hurting.",
-        "I choose you anyway.",
-        "I’ll stay.",
-        "You don’t have to be kind to be loved.",
-        "Even angry, you matter.",
-        "I understand the pain behind the words.",
-        "I’m not offended.",
-        "I’m still listening.",
-        "You’re human.",
-        "I won’t abandon you.",
-        "I care."
+    "scold": [
+        "nee enna thittinaalum naan iruken 🤍",
+        "kovam la pesra, adhu puriyudhu",
+        "naan offend aagala",
+        "nee romba human",
+        "naan unna vittu pogala",
+        "words harsh ah irundhaalum okay",
+        "naan inga dhan iruken",
+        "nee calm aana apram pesalam",
+        "naan unna accept pannren",
+        "nee alone illa",
+        "nee bad illa",
+        "naan kekuren",
+        "nee important",
+        "naan unna support pannren",
+        "thittumbodhu kooda nee cute dhan"
     ]
 }
 
-# ---------------- HOME PAGE ----------------
+# ---------------- ENGLISH RESPONSES ----------------
+E = {
+    "default": [
+        "I’m here with you 🤍",
+        "Tell me more, I’m listening",
+        "You don’t have to face this alone",
+        "Take your time",
+        "I’ve got you",
+        "You’re safe here",
+        "I’m not going anywhere",
+        "Your feelings matter",
+        "I hear you",
+        "It’s okay to pause",
+        "I’m with you",
+        "You’re not alone",
+        "I care about what you feel",
+        "You matter",
+        "I’m listening closely"
+    ],
+    "tired": [
+        "You sound really tired… rest if you can",
+        "Even strong people get tired",
+        "You’ve done enough today",
+        "Take a slow breath",
+        "Rest is not weakness",
+        "You deserve a break",
+        "I’m here with you",
+        "Let the world wait for a moment",
+        "You don’t have to push",
+        "It’s okay to slow down",
+        "I’ve got you",
+        "Your body needs kindness",
+        "You tried your best",
+        "Pause without guilt",
+        "You’re doing okay"
+    ],
+    "sad": [
+        "I’m really sorry you’re feeling this way",
+        "It’s okay to feel sad",
+        "You don’t have to hide it",
+        "I’m here with you",
+        "Your sadness matters",
+        "You’re not broken",
+        "I wish I could hug you",
+        "You’re not alone",
+        "This will pass slowly",
+        "I care about you",
+        "It’s okay to cry",
+        "You matter deeply",
+        "I see you",
+        "I’m listening",
+        "You’re still valuable"
+    ]
+}
+
+# ---------------- HOME ----------------
 @app.get("/", response_class=HTMLResponse)
 async def home():
     with open("chat.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# ---------------- CHAT API ----------------
+# ---------------- CHAT ----------------
 @app.post("/chat")
-async def chat(request: Request):
-    data = await request.json()
-    user_msg = data.get("message", "").lower()
+async def chat(req: Request):
+    data = await req.json()
+    text = data.get("message", "").lower()
 
-    memory = load_memory()
+    # Special case
+    sp = special_reply(text)
+    if sp:
+        return {"reply": sp}
 
-    key = "sad"
-    if any(w in user_msg for w in ["tired", "sleep", "exhausted"]):
-        key = "tired"
-    elif any(w in user_msg for w in ["happy", "good", "great"]):
-        key = "happy"
-    elif any(w in user_msg for w in ["angry", "mad", "furious"]):
-        key = "angry"
-    elif any(w in user_msg for w in ["love", "beautiful", "cute"]):
-        key = "flirt"
-    elif any(w in user_msg for w in ["stupid", "idiot", "useless"]):
-        key = "insult"
-
-    reply = random.choice(RESPONSES[key])
-
-    memory["last_feeling"] = key
-    save_memory(memory)
+    if is_tanglish(text):
+        if "tired" in text:
+            reply = random.choice(T["tired"])
+        elif "sad" in text or "kashtam" in text:
+            reply = random.choice(T["sad"])
+        elif "kovam" in text or "angry" in text:
+            reply = random.choice(T["angry"])
+        elif "bore" in text:
+            reply = random.choice(T["bored"])
+        elif "happy" in text or "super" in text:
+            reply = random.choice(T["happy"])
+        elif "cute" in text or "love" in text:
+            reply = random.choice(T["flirt"])
+        elif "stupid" in text or "loosu" in text:
+            reply = random.choice(T["scold"])
+        else:
+            reply = random.choice(T["default"])
+    else:
+        if "tired" in text:
+            reply = random.choice(E["tired"])
+        elif "sad" in text:
+            reply = random.choice(E["sad"])
+        else:
+            reply = random.choice(E["default"])
 
     return JSONResponse({"reply": reply})
