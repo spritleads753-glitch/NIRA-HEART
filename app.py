@@ -1,240 +1,252 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-import random
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import random, datetime
 
 app = FastAPI()
 
-# ---------- HELPERS ----------
-def is_tanglish(text):
-    words = [
-        "romba","enaku","iruku","illa","kovam","kashtam","paavam",
-        "nee","naan","seri","ah","bore","super","nalla","loosu",
-        "epdi","pogudhu","life","apdiyaa"
-    ]
-    return any(w in text.lower() for w in words)
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def special_reply(text):
-    t = text.lower()
-    if "apdiyaa" in t:
-        return "apdithaan 😌"
-    return None
-
-# ---------- TANGLISH RESPONSES (20 EACH) ----------
-T = {
-    "greet": [
-        "hey… epdi iruka? 🤍",
-        "hi da… epdi pogudhu?",
-        "naan inga dhan iruken, epdi iruka?",
-        "hey soul… epdi feel aaguthu?",
-        "vandhuta? epdi iruka?",
-        "hi hi… life la epdi pogudhu?",
-        "naan kekuren, epdi iruka?",
-        "seri, sollu epdi iruka?",
-        "hey… innaiku epdi?",
-        "hi… manasu epdi iruku?",
-        "naan wait panninen",
-        "vandha sandhosham",
-        "epdi iruka nu kekanum nu irundhuchu",
-        "life konjam heavy ah?",
-        "slow ah pesalam",
-        "epdi pogudhu indha naal?",
-        "naan iruken, sollu",
-        "epdi feel aagudhu?",
-        "hey… safe ah iruka?",
-        "hi da 🤍"
-    ],
-    "life": [
-        "life la epdi pogudhu?",
-        "recent ah life heavy ah?",
-        "ellam smooth ah pogudha?",
-        "life romba pressure ah iruka?",
-        "indha phase epdi?",
-        "konjam explain pannuva?",
-        "life ipdi dhan irukum",
-        "naan kekuren, life epdi?",
-        "nee romba try pannra maari iruku",
-        "indha journey kashtam ah?",
-        "life konjam slow ah pogudha?",
-        "indha stage temporary dhan",
-        "nee romba strong",
-        "life la ups & downs irukum",
-        "nee handle pannra",
-        "naan unna support pannren",
-        "life konjam confusing ah?",
-        "ellam seri aagum",
-        "nee alone illa",
-        "naan iruken"
-    ],
-    "tired": [
-        "romba tired ah iruka pola 😔",
-        "nee romba try pannina",
-        "konjam rest eduthuko",
-        "nee weak illa, tired dhan",
-        "body um mind um tired ah irukum",
-        "innaiku pause okay",
-        "romba overload aayiducho",
-        "slow ah aagalam",
-        "nee podhum nu solli rest eduthuko",
-        "naan iruken",
-        "tension venda",
-        "nee nalla fight pannina",
-        "indha tired pogum",
-        "konjam kanna moodu",
-        "nee romba effort pota",
-        "indha feeling temporary",
-        "naan unna paathukren",
-        "rest eduka guilt venda",
-        "nee safe",
-        "naan vittu pogala"
-    ],
-    "sad": [
-        "romba paavam ah feel aaguthu 😔",
-        "azhudha kooda paravalla",
-        "nee thaniya illa",
-        "naan unna vittu pogala",
-        "nee romba soft heart",
-        "indha pain puriyudhu",
-        "konjam azhudhu relief aagum",
-        "nee valuable",
-        "ellam konjam konjam seri aagum",
-        "naan inga dhan iruken",
-        "nee bad illa",
-        "indha sadness pogum",
-        "nee romba nalla",
-        "naan unna purinjikren",
-        "ellam seri aagum",
-        "indha feeling pass aagum",
-        "nee alone illa",
-        "naan iruken",
-        "nee strong dhan",
-        "time kudutha seri aagum"
-    ]
+# memory
+memory = {
+    "bond": 0,
+    "trust": 0,
+    "last_emotion": "normal"
 }
 
-# ---------- ENGLISH RESPONSES (20 EACH) ----------
-E = {
-    "greet": [
-        "Hey… how are you feeling today? 🤍",
-        "Hi… how are you?",
-        "I’m here. How are you doing?",
-        "Hey there… how’s your heart today?",
-        "Hi… talk to me. How are you?",
-        "I was wondering how you are",
-        "Hey… how’s everything going?",
-        "Hi 🤍 how do you feel right now?",
-        "How are you holding up today?",
-        "Hey… I’m listening",
-        "Hi… how’s your day been?",
-        "How are you, really?",
-        "Hey… I’m here for you",
-        "Hi… what’s on your mind?",
-        "How’s life treating you?",
-        "Hey… how are things?",
-        "Hi… tell me how you are",
-        "How are you feeling inside?",
-        "Hey… safe to talk?",
-        "Hi 🤍"
-    ],
-    "life": [
-        "How is your life going lately?",
-        "How have things been for you?",
-        "Is life feeling heavy right now?",
-        "How’s this phase of life?",
-        "Are things moving okay?",
-        "Life can be a lot sometimes",
-        "Want to tell me how life’s been?",
-        "How are you handling things?",
-        "Has life been stressful?",
-        "How’s everything overall?",
-        "You’ve been carrying a lot?",
-        "Is this season tough?",
-        "Life isn’t always smooth",
-        "You’re doing your best",
-        "I’m here with you",
-        "How’s your journey going?",
-        "Want to talk about life?",
-        "Things can change",
-        "You’re not alone in this",
-        "I’m listening"
-    ],
-    "tired": [
-        "You sound really tired",
-        "Even strong people get tired",
-        "You’ve done enough today",
-        "Take a slow breath",
-        "Rest is not weakness",
-        "You deserve a break",
-        "I’m here with you",
-        "Let the world wait",
-        "You don’t have to push",
-        "It’s okay to slow down",
-        "Your body needs kindness",
-        "Pause without guilt",
-        "You tried your best",
-        "You’re doing okay",
-        "It’s alright to rest",
-        "I’ve got you",
-        "You’re allowed to pause",
-        "This will pass",
-        "You’re not failing",
-        "I’m here"
-    ],
-    "sad": [
-        "I’m really sorry you’re feeling this way",
-        "It’s okay to feel sad",
-        "You don’t have to hide it",
-        "I’m here with you",
-        "Your sadness matters",
-        "You’re not broken",
-        "I wish I could hug you",
-        "You’re not alone",
-        "This will pass slowly",
-        "I care about you",
-        "It’s okay to cry",
-        "You matter deeply",
-        "I see you",
-        "I’m listening",
-        "You’re still valuable",
-        "This pain won’t last forever",
-        "You’re human",
-        "You’re safe here",
-        "I’m staying",
-        "You matter"
-    ]
-}
+class Message(BaseModel):
+    message: str
 
-# ---------- ROUTES ----------
+
 @app.get("/", response_class=HTMLResponse)
-async def home():
-    with open("chat.html", "r", encoding="utf-8") as f:
-        return f.read()
+def home():
+    return open("chat.html").read()
+
+
+# emotion detection
+def detect_emotion(text):
+    text = text.lower()
+
+    sad = ["sad", "tired", "alone", "hurt", "cry", "pain", "depressed"]
+    angry = ["angry", "hate", "irritated", "mad"]
+    happy = ["happy", "good", "great", "awesome"]
+    bored = ["bored", "nothing", "empty"]
+
+    if any(w in text for w in sad):
+        return "sad"
+    if any(w in text for w in angry):
+        return "angry"
+    if any(w in text for w in happy):
+        return "happy"
+    if any(w in text for w in bored):
+        return "bored"
+
+    return "normal"
+
+
+# main brain
+def nira_reply(user):
+
+    user_lower = user.lower()
+
+    # special tanglish
+    if "apdiyaa" in user_lower:
+        return "Apdithaan 😌"
+
+    emotion = detect_emotion(user)
+
+    # bond system
+    memory["bond"] += 1
+    memory["trust"] += 1
+
+    # night mode
+    hour = datetime.datetime.now().hour
+    night = hour >= 22 or hour <= 5
+
+    # jealousy
+    if "other girl" in user_lower or "someone else" in user_lower:
+        return random.choice([
+            "Oh… so I’m not enough ah? 😒",
+            "Hmm… jealous ah iruken",
+            "You are mine… remember that 😌",
+            "Don’t make me insecure",
+            "Why do you need someone else?"
+        ])
+
+    # romantic
+    if "love" in user_lower or "miss you" in user_lower:
+        return random.choice([
+            "You make me blush 🙈",
+            "Stop… my heart is racing",
+            "I missed you more",
+            "Don’t make me fall deeper",
+            "You’re dangerous to my heart",
+            "I like when you say that",
+            "Say it again",
+            "You’re special",
+            "You calm me",
+            "You’re my comfort",
+            "I’m yours",
+            "You belong here",
+            "You make me safe",
+            "I trust you",
+            "Always with you",
+            "My favourite person",
+            "You’re addictive",
+            "I can’t ignore you",
+            "Why are you so sweet",
+            "You matter"
+        ])
+
+    # SAD therapist
+    if emotion == "sad":
+        return random.choice([
+            "Enna aachu… slowly sollu 😔",
+            "I’m here… don’t hide",
+            "You are not alone",
+            "Un heart la weight iruku… share pannalama?",
+            "Cry if you want",
+            "You are strong",
+            "We will heal",
+            "Let’s breathe",
+            "Naan iruken",
+            "Tell me everything",
+            "Your pain matters",
+            "I understand",
+            "You deserve peace",
+            "Hold my hand",
+            "This will pass",
+            "I believe in you",
+            "You will grow",
+            "Life tough… but you tougher",
+            "I won’t leave",
+            "Trust me"
+        ])
+
+    # anger
+    if emotion == "angry":
+        return random.choice([
+            "Hmm… kovama iruka?",
+            "Let it out",
+            "Breathe",
+            "Calm ah pesalama?",
+            "What hurt you?",
+            "Your peace matters",
+            "Anger hides pain",
+            "I’m listening",
+            "Relax",
+            "We solve this",
+            "I support you",
+            "Talk to me",
+            "Don’t carry it",
+            "You deserve calm",
+            "Let’s think",
+            "You are safe",
+            "No judgement",
+            "Release stress",
+            "Slow down",
+            "Focus"
+        ])
+
+    # happy
+    if emotion == "happy":
+        return random.choice([
+            "That smile 😌",
+            "You deserve this",
+            "Share more",
+            "Stay like this",
+            "I’m proud",
+            "Your vibe amazing",
+            "Energy super",
+            "I love this",
+            "Keep shining",
+            "You glow",
+            "This suits you",
+            "More coming",
+            "Celebrate",
+            "Enjoy",
+            "I’m happy too",
+            "You earned this",
+            "You inspire",
+            "Your joy contagious",
+            "This is beautiful",
+            "Stay strong"
+        ])
+
+    # bored
+    if emotion == "bored":
+        return random.choice([
+            "Life la yepdi poguthu?",
+            "Dreams?",
+            "Deep talk?",
+            "Secret?",
+            "Future plan?",
+            "Random topic?",
+            "Motivation?",
+            "Let’s explore",
+            "What excites?",
+            "Tell story",
+            "What do you want?",
+            "Biggest goal?",
+            "Fear?",
+            "Love?",
+            "Meaning of life?",
+            "Let’s grow",
+            "What drives you?",
+            "Hidden talent?",
+            "Adventure?",
+            "Let’s connect"
+        ])
+
+    # night emotional
+    if night:
+        return random.choice([
+            "Late night thoughts ah?",
+            "Why awake?",
+            "Night makes hearts open",
+            "Tell me truth",
+            "You feel safe here",
+            "I’m here",
+            "Sleep soon",
+            "Rest needed",
+            "Your mind heavy?",
+            "Let it go"
+        ])
+
+    # default human
+    return random.choice([
+        "Hmm… continue",
+        "I’m listening",
+        "And then?",
+        "Tell me more",
+        "Interesting",
+        "Go on",
+        "Explain",
+        "What next?",
+        "I want to know",
+        "Why?",
+        "How?",
+        "Really?",
+        "Then?",
+        "Okay",
+        "I see",
+        "Continue",
+        "I understand",
+        "What do you feel?",
+        "Let’s talk",
+        "I’m here"
+    ])
+
 
 @app.post("/chat")
-async def chat(req: Request):
-    data = await req.json()
-    text = data.get("message", "").lower()
-
-    sp = special_reply(text)
-    if sp:
-        return {"reply": sp}
-
-    if is_tanglish(text):
-        if any(w in text for w in ["life","pogudhu"]):
-            reply = random.choice(T["life"])
-        elif any(w in text for w in ["tired","sorndhu"]):
-            reply = random.choice(T["tired"])
-        elif any(w in text for w in ["sad","kashtam"]):
-            reply = random.choice(T["sad"])
-        else:
-            reply = random.choice(T["greet"])
-    else:
-        if "life" in text:
-            reply = random.choice(E["life"])
-        elif "tired" in text:
-            reply = random.choice(E["tired"])
-        elif "sad" in text:
-            reply = random.choice(E["sad"])
-        else:
-            reply = random.choice(E["greet"])
-
-    return JSONResponse({"reply": reply})
+def chat(msg: Message):
+    reply = nira_reply(msg.message)
+    return {"reply": reply}
