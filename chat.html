@@ -105,7 +105,6 @@ function speak(text){
 
   let femaleVoice = voices.find(v =>
     v.name.toLowerCase().includes("female") ||
-    v.name.toLowerCase().includes("woman") ||
     v.name.toLowerCase().includes("zira") ||
     v.name.toLowerCase().includes("samantha")
   );
@@ -116,16 +115,33 @@ function speak(text){
     msg.voice = femaleVoice;
   }
 
+  // default voice
   msg.rate = 0.9;
   msg.pitch = 1.1;
+  msg.volume = 1;
 
   const hour = new Date().getHours();
 
-  // whisper at night
+  // 🌙 NIGHT WHISPER
   if(hour >= 22 || hour <= 5){
-    msg.rate = 0.75;
-    msg.pitch = 0.8;
-    msg.volume = 0.7;
+    msg.rate = 0.6;
+    msg.pitch = 0.75;
+    msg.volume = 0.6;
+  }
+
+  // ❤️ EMOTIONAL WHISPER
+  const emotionalWords = [
+    "sad","tired","alone","hurt","cry",
+    "lonely","stress","depressed",
+    "kashtam","sorndhu","azhudhu"
+  ];
+
+  const lower = text.toLowerCase();
+
+  if(emotionalWords.some(w => lower.includes(w))){
+    msg.rate = 0.55;
+    msg.pitch = 0.7;
+    msg.volume = 0.5;
   }
 
   speechSynthesis.cancel();
